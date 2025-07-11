@@ -1,24 +1,57 @@
-# Base image with Elixir and Erlang
-FROM elixir:1.18-alpine
+# Stage 1: Build Elixir + assets
+FROM elixir:1.18-alpine AS build
 
-# Install build tools
-RUN apk add --no-cache build-base git
+# Install required packages
+RUN apk add --no-cache build-base nodejs npm git python3
 
-# Set workdir
-WORKDIR /app
+# Set working directory
+WORKDIR /app/phoenix/phoenix_app
 
-# Install Hex and Rebar (Elixir build tools)
+# Install hex & rebar
 RUN mix local.hex --force && \
     mix local.rebar --force
 
-# Copy project files
+# Copy mix files
+COPY mix.exs /app/phoenix/phoenix_app
+
+# Fetch dependencies
+RUN mix deps.get --only prod
+
+# Copy the rest of the project
 COPY . .
 
-# Get dependencies
-RUN mix deps.get
-
 # Compile the project
-RUN mix compile
+RUN MIX_ENV=prod mix compile
 
-# Set default command to run Elixir's interactive shell (or change it to run your app)
-CMD ["iex", "-S", "mix"]
+# Install Node dependencies & build assets
+WORKDIR /app/assets
+
+RUN mix compile
+RUN mix phx.digest
+
+# Digest assets
+WORKDIR /app
+# RUN MIX_ENV=prod mix phx.digest
+
+# Stage 2: Create minimal release image
+FROM alpine:3.19 AS app
+
+# Install runtime dependencies
+RUN apk add --no-cache libstdc++ openssl ncurses-libs
+
+WORKDIR /app
+
+# Copy release from build stage
+# COPY --from=build /app/_build/prod/rel/* ./
+# COPY --from=build /app/priv/static ./priv/static
+
+# Set environment variables (configure for your app)
+ENV MIX_ENV=prod \
+    PHX_SERVER=true \
+    PORT=4000
+
+# Expose Phoenix default port
+EXPOSE 4000
+
+# Run the Phoenix app
+CMD ["mix","phx.server"]

@@ -1,0 +1,35 @@
+<.flash_group flash={@flash} />
+<h1>📘 Word Frequency Counter</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Word</th>
+      <th>Count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%= for {word, count} <- Enum.sort(@word_counts) do %>
+      <tr>
+        <td><%= word %></td>
+        <td><%= count %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<style>
+  table {
+    width: 50%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+  }
+  th {
+    background: #e6f7ff;
+  }
+</style>
